@@ -43,6 +43,7 @@ typedef struct {
   double mm_per_arc_segment;
   double acceleration;
   double junction_deviation;
+  double backlash[3];
 } settings_t;
 extern settings_t settings;
 

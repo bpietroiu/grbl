@@ -53,6 +53,10 @@ typedef struct {
 #define DEFAULT_FEEDRATE 500.0
 #define DEFAULT_ACCELERATION (DEFAULT_FEEDRATE*60*60/10.0) // mm/min^2
 #define DEFAULT_JUNCTION_DEVIATION 0.05 // mm
+#define DEFAULT_BACKLASH_X 0
+#define DEFAULT_BACKLASH_Y 0
+#define DEFAULT_BACKLASH_Z 0
+
 #define DEFAULT_STEPPING_INVERT_MASK ((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT))
 
 void settings_reset() {
@@ -66,6 +70,9 @@ void settings_reset() {
   settings.mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT;
   settings.invert_mask = DEFAULT_STEPPING_INVERT_MASK;
   settings.junction_deviation = DEFAULT_JUNCTION_DEVIATION;
+  settings.backlash[X_AXIS] = DEFAULT_BACKLASH_X;
+  settings.backlash[Y_AXIS] = DEFAULT_BACKLASH_Y;
+  settings.backlash[Z_AXIS] = DEFAULT_BACKLASH_Z;
 }
 
 void settings_dump() {
@@ -81,6 +88,13 @@ void settings_dump() {
   printPgmString(PSTR(")\r\n$8 = ")); printFloat(settings.acceleration/(60*60)); // Convert from mm/min^2 for human readability
   printPgmString(PSTR(" (acceleration in mm/sec^2)\r\n$9 = ")); printFloat(settings.junction_deviation);
   printPgmString(PSTR(" (cornering junction deviation in mm)"));
+
+  printPgmString(PSTR("\r\n$10 = ")); printFloat(settings.backlash[0]);
+  printPgmString(PSTR(" mm (backlash x)\r\n$11 = ")); printFloat(settings.backlash[1]);
+  printPgmString(PSTR(" mm (backlash y)\r\n$12 = ")); printFloat(settings.backlash[2]);
+  printPgmString(PSTR(" mm (backlash z)"));
+
+
   printPgmString(PSTR("\r\n'$x=value' to set parameter or just '$' to dump current settings\r\n"));
 }
 
@@ -167,6 +181,11 @@ void settings_store_setting(int parameter, double value) {
     case 7: settings.invert_mask = trunc(value); break;
     case 8: settings.acceleration = value*60*60; break; // Convert to mm/min^2 for grbl internal use.
     case 9: settings.junction_deviation = fabs(value); break;
+
+    case 10: settings.backlash[parameter - 10] = value; break;
+    case 11: settings.backlash[parameter - 10] = value; break;
+    case 12: settings.backlash[parameter - 10] = value; break;
+
     default: 
       printPgmString(PSTR("Unknown parameter\r\n"));
       return;

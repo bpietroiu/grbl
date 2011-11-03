@@ -46,6 +46,9 @@ static int32_t position[3];             // The current position of the tool in a
 static double previous_unit_vec[3];     // Unit vector of previous path line segment
 static double previous_nominal_speed;   // Nominal speed of previous path line segment
 
+// The current direction of the tool :  0 initial value, -1 high to low, 1 low to high; platou movement for an axis is not recorded
+static int8_t direction[3];   
+
 static uint8_t acceleration_manager_enabled;   // Acceleration management active?
 
 
@@ -293,6 +296,7 @@ void plan_init() {
   plan_set_acceleration_manager_enabled(true);
   clear_vector(position);
   clear_vector_double(previous_unit_vec);
+  direction[0] = direction[1] = direction[2] = 0;
   previous_nominal_speed = 0.0;
 }
 
@@ -319,11 +323,84 @@ block_t *plan_get_current_block() {
 }
 
 
+
+//#if ENABLE_BACKLASH_COMPENSATION==1
+void plan_buffer_line_inner(double x, double y, double z, double feed_rate, uint8_t invert_feed_rate, uint8_t backlash_block);
+
+void plan_buffer_backlash_compensation(double x, double y, double z, double feed_rate, uint8_t invert_feed_rate)
+{
+
+
+	uint8_t axis;
+	double backlash[3] ={0.0, 0.0, 0.0};
+
+	// Calculate target position in absolute steps
+	int32_t target[3];
+
+	target[X_AXIS] = lround(x*settings.steps_per_mm[X_AXIS]);
+	target[Y_AXIS] = lround(y*settings.steps_per_mm[Y_AXIS]);
+	target[Z_AXIS] = lround(z*settings.steps_per_mm[Z_AXIS]);     
+
+  for (axis=0; axis<= 2; axis++){
+		
+		backlash[axis] = 0.0;
+		
+		if (target[axis] < position[axis]) {
+
+	  // reversing direction on this axis, compensate with backlash
+		// (we move high to low, prev was low to high)
+		if(direction[axis] == 1)
+			backlash[axis] = settings.backlash[axis];
+		
+		// capture crt direction for next block
+		direction[axis] = -1;
+	  }
+	  else 
+	  if (target[axis] > position[axis]){
+		// reversing direction on this axis, compensate with backlash
+		// (we move low to high, compensate if prev was high to  low)
+		if(direction[axis] == -1)
+			backlash[axis] = settings.backlash[axis] ;
+	  
+		// capture crt direction for next block
+		direction[axis] = 1;
+	  }
+	  else
+	  {
+		// no movement on this axis, we keep record the prev movement direction and compensate only if moving in oposite
+	  }
+  
+  }
+  
+  if(backlash[X_AXIS] + backlash[Y_AXIS] + backlash[Z_AXIS] > 0){
+	double x, y, z;
+	x = position[X_AXIS] / settings.steps_per_mm[X_AXIS] + direction[X_AXIS] * backlash[X_AXIS];
+	y = position[Y_AXIS] / settings.steps_per_mm[X_AXIS] + direction[Y_AXIS] * backlash[Y_AXIS];
+	z = position[Z_AXIS] / settings.steps_per_mm[X_AXIS] + direction[Z_AXIS] * backlash[Z_AXIS];
+	
+	plan_buffer_line_inner( x, y, z, feed_rate / 2, invert_feed_rate, 1);
+  }
+  
+	
+}
+//#endif	
+
+
+void plan_buffer_line(double x, double y, double z, double feed_rate, uint8_t invert_feed_rate){
+	
+//#if ENABLE_BACKLASH_COMPENSATION==1
+ 	plan_buffer_backlash_compensation(x, y, z, feed_rate, invert_feed_rate);
+//#endif	
+	
+	plan_buffer_line_inner(x, y, z, feed_rate, invert_feed_rate, 0);
+}
+
+
 // Add a new linear movement to the buffer. x, y and z is the signed, absolute target position in 
 // millimaters. Feed rate specifies the speed of the motion. If feed rate is inverted, the feed
 // rate is taken to mean "frequency" and would complete the operation in 1/feed_rate minutes.
-void plan_buffer_line(double x, double y, double z, double feed_rate, uint8_t invert_feed_rate) {
-  
+void plan_buffer_line_inner(double x, double y, double z, double feed_rate, uint8_t invert_feed_rate, uint8_t backlash_block) {
+
   // Calculate target position in absolute steps
   int32_t target[3];
   target[X_AXIS] = lround(x*settings.steps_per_mm[X_AXIS]);
@@ -458,8 +535,10 @@ void plan_buffer_line(double x, double y, double z, double feed_rate, uint8_t in
   
   // Move buffer head
   block_buffer_head = next_buffer_head;     
+  
   // Update position
-  memcpy(position, target, sizeof(target)); // position[] = target[]
+  if(backlash_block == 0)
+	memcpy(position, target, sizeof(target)); // position[] = target[]
 
   if (acceleration_manager_enabled) { planner_recalculate(); }  
   st_cycle_start();

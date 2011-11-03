@@ -44,10 +44,16 @@
 #define MOTION_MODE_CW_ARC 2  // G2
 #define MOTION_MODE_CCW_ARC 3  // G3
 #define MOTION_MODE_CANCEL 4 // G80
+#define MOTION_MODE_DRILL_81 5 // G81, G82, G83
+#define MOTION_MODE_DRILL_82 6 // G81, G82, G83
+#define MOTION_MODE_DRILL_83 7 // G81, G82, G83
 
 #define PATH_CONTROL_MODE_EXACT_PATH 0
 #define PATH_CONTROL_MODE_EXACT_STOP 1
 #define PATH_CONTROL_MODE_CONTINOUS  2
+
+#define CANNED_CYCLE_RETRACT_LEVEL_OLD_Z 0
+#define CANNED_CYCLE_RETRACT_LEVEL_R  1
 
 #define PROGRAM_FLOW_RUNNING 0
 #define PROGRAM_FLOW_PAUSED 1
@@ -63,6 +69,7 @@ typedef struct {
   uint8_t inverse_feed_rate_mode;  /* G93, G94 */
   uint8_t inches_mode;             /* 0 = millimeter mode, 1 = inches mode {G20, G21} */
   uint8_t absolute_mode;           /* 0 = relative motion, 1 = absolute motion {G90, G91} */
+  uint8_t canned_cycle_retract_level;
   uint8_t program_flow;
   int8_t spindle_direction;
   double feed_rate, seek_rate;     /* Millimeters/second */
@@ -72,6 +79,7 @@ typedef struct {
   uint8_t plane_axis_0, 
           plane_axis_1, 
           plane_axis_2;            // The axes of the selected plane  
+		  
 } parser_state_t;
 static parser_state_t gc;
 
@@ -114,7 +122,7 @@ uint8_t gc_execute_line(char *line) {
   
   double target[3], offset[3];  
   
-  double p = 0, r = 0;
+  double p = 0, q=0, r=0;
   int int_value;
 
   gc.status_code = STATUS_OK;
@@ -139,13 +147,29 @@ uint8_t gc_execute_line(char *line) {
         case 21: gc.inches_mode = false; break;
         case 28: case 30: next_action = NEXT_ACTION_GO_HOME; break;
         case 53: absolute_override = true; break;
-        case 80: gc.motion_mode = MOTION_MODE_CANCEL; break;        
+        case 80: gc.motion_mode = MOTION_MODE_CANCEL; break;    
+        
+//#ifdef ENABLE_DRILL
+		// Drilling canned cycles
+		case 81: // Without dwell
+			gc.motion_mode = MOTION_MODE_DRILL_81; break;    
+        case 82: // With dwell
+			gc.motion_mode = MOTION_MODE_DRILL_82; break;    
+        case 83: // Peck drilling
+			gc.motion_mode = MOTION_MODE_DRILL_83; break;    
+//#endif
+			
         case 90: gc.absolute_mode = true; break;
         case 91: gc.absolute_mode = false; break;
         case 92: next_action = NEXT_ACTION_SET_COORDINATE_OFFSET; break;        
         case 93: gc.inverse_feed_rate_mode = true; break;
         case 94: gc.inverse_feed_rate_mode = false; break;
-        default: FAIL(STATUS_UNSUPPORTED_STATEMENT);
+        
+//#ifdef ENABLE_DRILL
+		case 98: gc.canned_cycle_retract_level = CANNED_CYCLE_RETRACT_LEVEL_OLD_Z; break;
+        case 99: gc.canned_cycle_retract_level = CANNED_CYCLE_RETRACT_LEVEL_R; break;
+//#endif        
+		default: FAIL(STATUS_UNSUPPORTED_STATEMENT);
       }
       break;
       
@@ -191,6 +215,7 @@ uint8_t gc_execute_line(char *line) {
       break;
       case 'I': case 'J': case 'K': offset[letter-'I'] = unit_converted_value; break;
       case 'P': p = value; break;
+      case 'Q': q = unit_converted_value; break;
       case 'R': r = unit_converted_value; radius_mode = true; break;
       case 'S': gc.spindle_speed = value; break;
       case 'X': case 'Y': case 'Z':
@@ -219,6 +244,80 @@ uint8_t gc_execute_line(char *line) {
     case NEXT_ACTION_DEFAULT: 
     switch (gc.motion_mode) {
       case MOTION_MODE_CANCEL: break;
+
+//#ifdef ENABLE_DRILL
+	  case MOTION_MODE_DRILL_81:
+	  case MOTION_MODE_DRILL_82:
+	  case MOTION_MODE_DRILL_83:
+	  {
+		
+		int32_t retract_level;
+			
+		
+		float retract = r;
+		
+		
+		if (!gc.absolute_mode)
+			retract += gc.position[Z_AXIS];
+
+		if(gc.canned_cycle_retract_level == CANNED_CYCLE_RETRACT_LEVEL_R)
+			retract_level = retract;
+		else
+			retract_level = gc.position[Z_AXIS];
+
+			
+		// Retract to R position if Z is currently below this
+		if (gc.position[Z_AXIS] < retract )
+			mc_line(gc.position[X_AXIS], gc.position[Y_AXIS], retract, gc.seek_rate, false);
+			
+		mc_line(target[X_AXIS], target[Y_AXIS], retract, gc.seek_rate, false);
+		
+		// Do the actual drilling
+		float target_z = retract;
+		float delta_z;
+
+		// For G83 move in increments specified by Q code, otherwise do in one pass
+		if (gc.motion_mode == MOTION_MODE_DRILL_83  && q > 0)
+			delta_z = q;
+		else
+			delta_z = retract - target[Z_AXIS];
+		
+
+		
+		do {
+			// Move rapidly to bottom of hole drilled so far (target Z if starting hole)
+			mc_line(target[X_AXIS], target[Y_AXIS], target_z, gc.seek_rate, false);
+
+			// Move with controlled feed rate by delta z (or to bottom of hole if less)
+			target_z -= delta_z;
+			if (target_z < target[Z_AXIS])
+				target_z = target[Z_AXIS];
+
+			mc_line(target[X_AXIS], target[Y_AXIS], target_z, 
+				(gc.inverse_feed_rate_mode) ? inverse_feed_rate : gc.feed_rate, gc.inverse_feed_rate_mode);
+
+			// Dwell if doing a G82 or G83
+			// (cambam generates dwell for peck canned cycle too)
+			if (gc.motion_mode == MOTION_MODE_DRILL_82 || gc.motion_mode == MOTION_MODE_DRILL_83)
+				mc_dwell(p);
+
+			// Retract
+			mc_line(target[X_AXIS], target[Y_AXIS], retract, gc.seek_rate, false);
+		} while (target_z > target[Z_AXIS]);
+			
+		
+		// end canned cycle and retract canned cycle to the level specified by last G98 or G99
+		if(target[Z_AXIS] != retract_level)
+			target[Z_AXIS] = retract_level;
+			
+		mc_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], gc.seek_rate, false);
+		
+		// restore default motion mode
+		gc.motion_mode = MOTION_MODE_SEEK;
+	
+	  }break;
+//#endif // ENABLE_DRILL
+
       case MOTION_MODE_SEEK:
       mc_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], gc.seek_rate, false);
       break;

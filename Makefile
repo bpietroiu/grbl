@@ -29,7 +29,7 @@
 
 DEVICE     = atmega328p
 CLOCK      = 16000000
-PROGRAMMER = -c avrisp2 -P usb
+PROGRAMMER = -F -v -pm328p -cstk500v1 -PCOM10 -b57600 -D 
 OBJECTS    = main.o motion_control.o gcode.o spindle_control.o serial.o protocol.o stepper.o \
              eeprom.o settings.o planner.o nuts_bolts.o limits.o print.o
 # FUSES      = -U hfuse:w:0xd9:m -U lfuse:w:0x24:m
@@ -59,7 +59,7 @@ all:	grbl.hex
 	$(COMPILE) -S $< -o $@
 
 flash:	all
-	$(AVRDUDE) -U flash:w:grbl.hex:i
+	$(AVRDUDE) -U flash:w:grbl-$(DEVICE).hex:i
 
 fuse:
 	$(AVRDUDE) $(FUSES)
@@ -79,8 +79,8 @@ main.elf: $(OBJECTS)
 	$(COMPILE) -o main.elf $(OBJECTS) -lm -Wl,--gc-sections
 
 grbl.hex: main.elf
-	rm -f grbl.hex
-	avr-objcopy -j .text -j .data -O ihex main.elf grbl.hex
+	rm -f grbl-$(DEVICE).hex
+	avr-objcopy -j .text -j .data -O ihex main.elf grbl-$(DEVICE).hex
 	avr-objdump -h main.elf | grep .bss | ruby -e 'puts "\n\n--- Requires %s bytes of SRAM" % STDIN.read.match(/0[0-9a-f]+\s/)[0].to_i(16)'
 	avr-size *.hex *.elf *.o
 # If you have an EEPROM section, you must also create a hex file for the
