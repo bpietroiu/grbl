@@ -79,6 +79,8 @@ typedef struct {
   uint8_t plane_axis_0, 
           plane_axis_1, 
           plane_axis_2;            // The axes of the selected plane  
+	
+	double stickyQ, stickyR;
 		  
 } parser_state_t;
 static parser_state_t gc;
@@ -100,6 +102,7 @@ void gc_init() {
   gc.seek_rate = settings.default_seek_rate;
   select_plane(X_AXIS, Y_AXIS, Z_AXIS);
   gc.absolute_mode = true;
+  gc.stickyR = gc.stickyQ = 0.0;
 }
 
 static float to_millimeters(double value) {
@@ -215,8 +218,8 @@ uint8_t gc_execute_line(char *line) {
       break;
       case 'I': case 'J': case 'K': offset[letter-'I'] = unit_converted_value; break;
       case 'P': p = value; break;
-      case 'Q': q = unit_converted_value; break;
-      case 'R': r = unit_converted_value; radius_mode = true; break;
+      case 'Q': gc.stickyQ = q = unit_converted_value; break;
+      case 'R': gc.stickyR = r = unit_converted_value; radius_mode = true; break;
       case 'S': gc.spindle_speed = value; break;
       case 'X': case 'Y': case 'Z':
       if (gc.absolute_mode || absolute_override) {
@@ -254,10 +257,10 @@ uint8_t gc_execute_line(char *line) {
 		int32_t retract_level;
 			
 		
-		float retract = r;
+		float retract = gc.stickyR;
 		
 		
-		if (!gc.absolute_mode)
+		if (gc.absolute_mode)
 			retract += gc.position[Z_AXIS];
 
 		if(gc.canned_cycle_retract_level == CANNED_CYCLE_RETRACT_LEVEL_R)
@@ -273,12 +276,12 @@ uint8_t gc_execute_line(char *line) {
 		mc_line(target[X_AXIS], target[Y_AXIS], retract, gc.seek_rate, false);
 		
 		// Do the actual drilling
-		float target_z = retract;
+		float target_z = retract - gc.stickyR;
 		float delta_z;
 
 		// For G83 move in increments specified by Q code, otherwise do in one pass
-		if (gc.motion_mode == MOTION_MODE_DRILL_83  && q > 0)
-			delta_z = q;
+		if (gc.motion_mode == MOTION_MODE_DRILL_83  && gc.stickyQ > 0)
+			delta_z = gc.stickyQ;
 		else
 			delta_z = retract - target[Z_AXIS];
 		
