@@ -33,7 +33,7 @@
 
 // The number of linear motions that can be in the plan at any give time
 #ifdef __AVR_ATmega328P__
-#define BLOCK_BUFFER_SIZE 18
+#define BLOCK_BUFFER_SIZE 14
 #else
 #define BLOCK_BUFFER_SIZE 5
 #endif
@@ -367,7 +367,7 @@ void plan_buffer_backlash_compensation(double x, double y, double z, double feed
 	  }
 	  else
 	  {
-		// no movement on this axis, we keep record the prev movement direction and compensate only if moving in oposite
+		// no movement on this axis, we keep record of the prev movement direction and compensate only if moving in oposite one
 	  }
   
   }
@@ -536,10 +536,13 @@ void plan_buffer_line_inner(double x, double y, double z, double feed_rate, uint
   // Move buffer head
   block_buffer_head = next_buffer_head;     
   
-  // Update position
-  if(backlash_block == 0)
-	memcpy(position, target, sizeof(target)); // position[] = target[]
+    block->backlash_block = backlash_block;
+	memcpy(block->position, position, sizeof(position)); // position[] = target[]
 
+	// Update position
+  if(backlash_block == 0){
+	memcpy(position, target, sizeof(target)); // position[] = target[]
+  }
   if (acceleration_manager_enabled) { planner_recalculate(); }  
   st_cycle_start();
 }
@@ -551,4 +554,21 @@ void plan_set_current_position(double x, double y, double z) {
   position[Z_AXIS] = lround(z*settings.steps_per_mm[Z_AXIS]);    
   previous_nominal_speed = 0.0; // Resets planner junction speeds. Assumes start from rest.
   clear_vector_double(previous_unit_vec);
+}
+
+
+// Reset the planner position vector and planner speed
+void plan_get_current_position(double *x, double *y, double *z) {
+  block_t * block = plan_get_current_block();
+  
+  if(block == NULL ){
+	  *x = position[X_AXIS] / settings.steps_per_mm[X_AXIS];
+	  *y = position[Y_AXIS] / settings.steps_per_mm[Y_AXIS];
+	  *z = position[Z_AXIS] / settings.steps_per_mm[Z_AXIS];
+  }
+  else{
+	  *x = block->position[X_AXIS] / settings.steps_per_mm[X_AXIS];
+	  *y = block->position[Y_AXIS] / settings.steps_per_mm[Y_AXIS];
+	  *z = block->position[Z_AXIS] / settings.steps_per_mm[Z_AXIS];
+  }
 }

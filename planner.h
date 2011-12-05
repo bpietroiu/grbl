@@ -27,6 +27,9 @@
 // This struct is used when buffering the setup for each linear movement "nominal" values are as specified in 
 // the source g-code and may never actually be reached if acceleration management is active.
 typedef struct {
+  int32_t position[3]; // x y z start position
+  int8_t backlash_block;
+
   // Fields used by the bresenham algorithm for tracing the line
   uint32_t steps_x, steps_y, steps_z; // Step count along each axis
   uint8_t  direction_bits;            // The direction bit set for this block (refers to *_DIRECTION_BIT in config.h)
@@ -74,4 +77,6 @@ int plan_is_acceleration_manager_enabled();
 // Reset the position vector
 void plan_set_current_position(double x, double y, double z); 
 
+// get the crt position
+void plan_get_current_position(double *x, double *y, double *z);
 #endif

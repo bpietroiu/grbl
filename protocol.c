@@ -25,6 +25,7 @@
 #include "serial.h"
 #include "print.h"
 #include "settings.h"
+#include "status.h"
 #include "config.h"
 #include <math.h>
 #include "nuts_bolts.h"
@@ -65,7 +66,10 @@ void protocol_init()
 uint8_t protocol_execute_line(char *line) {
   if(line[0] == '$') {
     return(settings_execute_line(line)); // Delegate lines starting with '$' to the settings module
-  } else {
+  }
+  else if(line[0] == '?') {
+    return(status_execute_line(line)); // Delegate lines starting with '$' to the settings module
+	} else {
     return(gc_execute_line(line));    // Everything else is gcode
   }
 }

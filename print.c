@@ -22,6 +22,10 @@
    used to be a part of the Arduino project. */ 
 
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
 #include <math.h>
 #include <avr/pgmspace.h>
 #include "serial.h"
@@ -76,20 +80,58 @@ void printInteger(long n)
 }
 
 // A very simple 
-void printFloat(double n)
+void printFloat2(double number , uint8_t decimal_places)
 {
-  double integer_part, fractional_part;
-  uint8_t decimal_part;
-  fractional_part = modf(n, &integer_part);
-  printInteger(integer_part);
-  serial_write('.');
-  fractional_part *= 10;
-  int decimals = DECIMAL_PLACES;  
-  while(decimals-- > 0) {
-    decimal_part = floor(fractional_part);
-    serial_write('0'+decimal_part);
-    fractional_part -= decimal_part;
-    fractional_part *= 10;
+	// Handle negative numbers
+  if (number < 0.0)
+  {
+     serial_write('-');
+     number = -number;
   }
+
+  // Round correctly so that print(1.999, 2) prints as "2.00"
+  double rounding = 0.5;
+  uint8_t digits = decimal_places;
+  uint8_t i;
+  for ( i=0; i<digits; ++i)
+    rounding /= 10.0;
+  
+  number += rounding;
+
+  // Extract the integer part of the number and print it
+  unsigned long int_part = (unsigned long)number;
+  double remainder = number - (double)int_part;
+  printInteger(int_part);
+
+  // Print the decimal point, but only if there are digits beyond
+  if (digits > 0)
+    serial_write('.'); 
+
+  // Extract digits from the remainder one at a time
+  while (digits-- > 0)
+  {
+    remainder *= 10.0;
+    int toPrint = (int)(remainder);
+    printInteger(toPrint);
+    remainder -= toPrint; 
+  } 
+	  
+//  double integer_part, fractional_part;
+//  uint8_t decimal_part;
+//  fractional_part = modf(n, &integer_part);
+//  printInteger(integer_part);
+//  serial_write('.');
+//  fractional_part *= 10;
+//  int decimals = DECIMAL_PLACES;  
+//  while(decimals-- > 0) {
+//    decimal_part = floor(fractional_part);
+//    serial_write('0'+decimal_part);
+//    fractional_part -= decimal_part;
+//    fractional_part *= 10;
+  //}
 }
 
+
+void printFloat(double number){
+	 printFloat2(number, DECIMAL_PLACES);
+}

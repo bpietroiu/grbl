@@ -43,6 +43,8 @@
 
 static block_t *current_block;  // A pointer to the block currently being traced
 
+
+
 // Variables used by The Stepper Driver Interrupt
 static uint8_t out_bits;        // The next stepping-bits to be output
 static int32_t counter_x,       // Counter variables for the bresenham line tracer
@@ -170,16 +172,39 @@ SIGNAL(TIMER1_COMPA_vect)
     if (counter_x > 0) {
       out_bits |= (1<<X_STEP_BIT);
       counter_x -= current_block->step_event_count;
+
+	  if(current_block->backlash_block == 0){
+		  if(out_bits & (1 << X_DIRECTION_BIT))
+			current_block->position[X_AXIS]-=1;
+		  else
+			current_block->position[X_AXIS]+=1;
+	  }
+	  
     }
     counter_y += current_block->steps_y;
     if (counter_y > 0) {
       out_bits |= (1<<Y_STEP_BIT);
       counter_y -= current_block->step_event_count;
-    }
+
+	  if(current_block->backlash_block == 0){
+		  if(out_bits & (1 << Y_DIRECTION_BIT))
+			current_block->position[Y_AXIS]-=1;
+		  else
+			current_block->position[Y_AXIS]+=1;
+		}
+
+	  }
     counter_z += current_block->steps_z;
     if (counter_z > 0) {
       out_bits |= (1<<Z_STEP_BIT);
       counter_z -= current_block->step_event_count;
+
+	  if(current_block->backlash_block == 0){
+		  if(out_bits & (1 << Z_DIRECTION_BIT))
+			current_block->position[Z_AXIS]-=1;
+		  else
+			current_block->position[Z_AXIS]+=1;
+		}
     }
     
     step_events_completed++; // Iterate step events

@@ -47,6 +47,7 @@
 #define MOTION_MODE_DRILL_81 5 // G81, G82, G83
 #define MOTION_MODE_DRILL_82 6 // G81, G82, G83
 #define MOTION_MODE_DRILL_83 7 // G81, G82, G83
+#define MOTION_MODE_DRILL_73 8 // G81, G82, G83
 
 #define PATH_CONTROL_MODE_EXACT_PATH 0
 #define PATH_CONTROL_MODE_EXACT_STOP 1
@@ -160,6 +161,8 @@ uint8_t gc_execute_line(char *line) {
 			gc.motion_mode = MOTION_MODE_DRILL_82; break;    
         case 83: // Peck drilling
 			gc.motion_mode = MOTION_MODE_DRILL_83; break;    
+        case 73: // Partial retract drilling
+			gc.motion_mode = MOTION_MODE_DRILL_73; break;    
 //#endif
 			
         case 90: gc.absolute_mode = true; break;
@@ -199,6 +202,8 @@ uint8_t gc_execute_line(char *line) {
   clear_vector(offset);
   memcpy(target, gc.position, sizeof(target)); // i.e. target = gc.position
 
+  uint8_t partial_retract = false;
+  
   // Pass 2: Parameters
   while(next_statement(&letter, &value, line, &char_counter)) {
     int_value = trunc(value);
@@ -249,6 +254,8 @@ uint8_t gc_execute_line(char *line) {
       case MOTION_MODE_CANCEL: break;
 
 //#ifdef ENABLE_DRILL
+	  case MOTION_MODE_DRILL_73:
+		partial_retract = true;
 	  case MOTION_MODE_DRILL_81:
 	  case MOTION_MODE_DRILL_82:
 	  case MOTION_MODE_DRILL_83:
@@ -280,7 +287,7 @@ uint8_t gc_execute_line(char *line) {
 		float delta_z;
 
 		// For G83 move in increments specified by Q code, otherwise do in one pass
-		if (gc.motion_mode == MOTION_MODE_DRILL_83  && gc.stickyQ > 0)
+		if ((gc.motion_mode == MOTION_MODE_DRILL_73 || gc.motion_mode == MOTION_MODE_DRILL_83)  && gc.stickyQ > 0)
 			delta_z = gc.stickyQ;
 		else
 			delta_z = retract - target[Z_AXIS];
@@ -305,7 +312,7 @@ uint8_t gc_execute_line(char *line) {
 				mc_dwell(p);
 
 			// Retract
-			mc_line(target[X_AXIS], target[Y_AXIS], retract, gc.seek_rate, false);
+			mc_line(target[X_AXIS], target[Y_AXIS], partial_retract? target_z + gc.stickyR : retract, gc.seek_rate, false);
 		} while (target_z > target[Z_AXIS]);
 			
 		

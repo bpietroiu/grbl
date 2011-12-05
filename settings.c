@@ -89,9 +89,9 @@ void settings_dump() {
   printPgmString(PSTR(" (acceleration in mm/sec^2)\r\n$9 = ")); printFloat(settings.junction_deviation);
   printPgmString(PSTR(" (cornering junction deviation in mm)"));
 
-  printPgmString(PSTR("\r\n$10 = ")); printFloat(settings.backlash[0]);
-  printPgmString(PSTR(" mm (backlash x)\r\n$11 = ")); printFloat(settings.backlash[1]);
-  printPgmString(PSTR(" mm (backlash y)\r\n$12 = ")); printFloat(settings.backlash[2]);
+  printPgmString(PSTR("\r\n$10 = ")); printFloat(settings.backlash[X_AXIS]);
+  printPgmString(PSTR(" mm (backlash x)\r\n$11 = ")); printFloat(settings.backlash[Y_AXIS]);
+  printPgmString(PSTR(" mm (backlash y)\r\n$12 = ")); printFloat(settings.backlash[Z_AXIS]);
   printPgmString(PSTR(" mm (backlash z)"));
 
 
