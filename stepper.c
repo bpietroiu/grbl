@@ -42,7 +42,7 @@
 #define CYCLES_PER_ACCELERATION_TICK ((TICKS_PER_MICROSECOND*1000000)/ACCELERATION_TICKS_PER_SECOND)
 
 static block_t *current_block;  // A pointer to the block currently being traced
-
+static uint8_t (*pFuncStepCallback)(block_t *);
 
 
 // Variables used by The Stepper Driver Interrupt
@@ -166,6 +166,16 @@ SIGNAL(TIMER1_COMPA_vect)
   } 
 
   if (current_block != NULL) {
+	
+	if(pFuncStepCallback != NULL){
+		if(pFuncStepCallback(current_block)){
+			// we should stop all movements as out callback commanded
+			current_block = NULL;
+			plan_discard_current_block();
+		}
+	}
+  
+  
     // Execute step displacement profile by bresenham line algorithm
     out_bits = current_block->direction_bits;
     counter_x += current_block->steps_x;
@@ -291,6 +301,8 @@ SIGNAL(TIMER2_OVF_vect)
 // Initialize and start the stepper motor subsystem
 void st_init()
 {
+	pFuncStepCallback = NULL;
+
 	// Configure directions of interface pins
   STEPPING_DDR   |= STEPPING_MASK;
   STEPPING_PORT = (STEPPING_PORT & ~STEPPING_MASK) | settings.invert_mask;
@@ -381,4 +393,9 @@ void st_cycle_start() {
     cycle_start = true;
     st_wake_up();
   }
+}
+
+
+void st_set_step_callback(uint8_t (*pFunc)(block_t *)){
+	pFuncStepCallback = pFunc;
 }

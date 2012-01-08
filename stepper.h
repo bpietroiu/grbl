@@ -23,6 +23,7 @@
 
 #include <avr/io.h>
 #include <avr/sleep.h>
+#include "planner.h"
 
 #define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All limit bits
 #define STEP_MASK ((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT)) // All step bits
@@ -40,5 +41,7 @@ void st_go_home();
              
 // Notify the stepper subsystem to start executing the g-code program in buffer.
 void st_cycle_start();
+
+void st_set_step_callback(uint8_t(*)(block_t *));
 
 #endif

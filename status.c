@@ -9,6 +9,7 @@
 #include <avr/pgmspace.h>
 #include "protocol.h"
 #include "config.h"
+#include "probe.h"
 
 
 // Parameter lines are on the form '$4=374.3' or '$' to dump current settings
@@ -29,6 +30,8 @@ uint8_t status_execute_line(char *line) {
 	printFloat2(y, 5);
     printPgmString(PSTR(" z="));
 	printFloat2(z, 5);
+    printPgmString(PSTR(" probe="));
+	printInteger(probe_get_status());
     printPgmString(PSTR("\n"));
   }
   else{ // binary report

@@ -375,8 +375,8 @@ void plan_buffer_backlash_compensation(double x, double y, double z, double feed
   if(backlash[X_AXIS] + backlash[Y_AXIS] + backlash[Z_AXIS] > 0){
 	double x, y, z;
 	x = position[X_AXIS] / settings.steps_per_mm[X_AXIS] + direction[X_AXIS] * backlash[X_AXIS];
-	y = position[Y_AXIS] / settings.steps_per_mm[X_AXIS] + direction[Y_AXIS] * backlash[Y_AXIS];
-	z = position[Z_AXIS] / settings.steps_per_mm[X_AXIS] + direction[Z_AXIS] * backlash[Z_AXIS];
+	y = position[Y_AXIS] / settings.steps_per_mm[Y_AXIS] + direction[Y_AXIS] * backlash[Y_AXIS];
+	z = position[Z_AXIS] / settings.steps_per_mm[Z_AXIS] + direction[Z_AXIS] * backlash[Z_AXIS];
 	
 	plan_buffer_line_inner( x, y, z, feed_rate / 2, invert_feed_rate, 1);
   }
@@ -556,6 +556,14 @@ void plan_set_current_position(double x, double y, double z) {
   clear_vector_double(previous_unit_vec);
 }
 
+// Reset the planner position vector and planner speed
+void plan_set_current_position_n(int32_t x, int32_t y, int32_t z) {
+  position[X_AXIS] = x;
+  position[Y_AXIS] = y;
+  position[Z_AXIS] = z;    
+  previous_nominal_speed = 0.0; // Resets planner junction speeds. Assumes start from rest.
+  clear_vector_double(previous_unit_vec);
+}
 
 // Reset the planner position vector and planner speed
 void plan_get_current_position(double *x, double *y, double *z) {
@@ -572,3 +580,4 @@ void plan_get_current_position(double *x, double *y, double *z) {
 	  *z = block->position[Z_AXIS] / settings.steps_per_mm[Z_AXIS];
   }
 }
+

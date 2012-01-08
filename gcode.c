@@ -31,6 +31,7 @@
 #include "spindle_control.h"
 #include "errno.h"
 #include "protocol.h"
+#include "probe.h"
 
 #define MM_PER_INCH (25.4)
 
@@ -48,6 +49,8 @@
 #define MOTION_MODE_DRILL_82 6 // G81, G82, G83
 #define MOTION_MODE_DRILL_83 7 // G81, G82, G83
 #define MOTION_MODE_DRILL_73 8 // G81, G82, G83
+#define MOTION_MODE_PROBE 	 9 // G38, 38.2
+
 
 #define PATH_CONTROL_MODE_EXACT_PATH 0
 #define PATH_CONTROL_MODE_EXACT_STOP 1
@@ -150,6 +153,7 @@ uint8_t gc_execute_line(char *line) {
         case 20: gc.inches_mode = true; break;
         case 21: gc.inches_mode = false; break;
         case 28: case 30: next_action = NEXT_ACTION_GO_HOME; break;
+        case 38: gc.motion_mode = MOTION_MODE_PROBE; break;
         case 53: absolute_override = true; break;
         case 80: gc.motion_mode = MOTION_MODE_CANCEL; break;    
         
@@ -253,6 +257,14 @@ uint8_t gc_execute_line(char *line) {
     switch (gc.motion_mode) {
       case MOTION_MODE_CANCEL: break;
 
+	  case MOTION_MODE_PROBE:
+	  {
+			gc.status_code = probe_seek(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], gc.seek_rate);
+			plan_get_current_position(&gc.position[X_AXIS], &gc.position[Y_AXIS], &gc.position[Z_AXIS]);
+			// restore default motion mode
+			gc.motion_mode = MOTION_MODE_SEEK;
+			return(gc.status_code);
+	  }break;
 //#ifdef ENABLE_DRILL
 	  case MOTION_MODE_DRILL_73:
 		partial_retract = true;

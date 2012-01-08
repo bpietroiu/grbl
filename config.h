@@ -42,11 +42,18 @@
 #define Y_DIRECTION_BIT      6
 #define Z_DIRECTION_BIT      7
 
-#define LIMIT_DDR      DDRB
-#define LIMIT_PIN     PINB
+#define LIMIT_DDR      		DDRB
+#define LIMIT_PIN     		PINB
 #define X_LIMIT_BIT          1
 #define Y_LIMIT_BIT          2
 #define Z_LIMIT_BIT          3
+
+#define PROBE_DDR			DDRC
+#define PROBE_PORT     		PORTC
+#define PROBE_PIN     		PINC
+#define PROBE_PORT_PIN		PC5
+#define PROBE_MASK     		(1<<PROBE_PORT_PIN)
+
 
 #define SPINDLE_ENABLE_DDR DDRB
 #define SPINDLE_ENABLE_PORT PORTB

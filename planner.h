@@ -76,6 +76,8 @@ int plan_is_acceleration_manager_enabled();
 
 // Reset the position vector
 void plan_set_current_position(double x, double y, double z); 
+// Reset the position vector
+void plan_set_current_position_n(int32_t x, int32_t y, int32_t z); 
 
 // get the crt position
 void plan_get_current_position(double *x, double *y, double *z);

@@ -30,6 +30,7 @@
 #include "gcode.h"
 #include "protocol.h"
 #include "limits.h"
+#include "probe.h"
 
 #include "settings.h"
 #include "serial.h"
@@ -46,6 +47,7 @@ int main(void)
   spindle_init();   
   gc_init();
   limits_init();
+  probe_init();
                     
   for(;;){
     sleep_mode(); // Wait for it ...
