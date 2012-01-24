@@ -14,12 +14,7 @@
 #include "serial.h"
 #include "motion_control.h"
 
-#ifndef cbi
-#define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
-#endif
-#ifndef sbi
-#define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
-#endif 
+
 
 uint8_t probe_get_status(){
 	return 	(PROBE_PIN & PROBE_MASK)?0:1;
@@ -39,13 +34,13 @@ void probe_init(){
 uint8_t probe_step_callback(block_t* pBlock){
 	
 	if((PROBE_PIN & PROBE_MASK) != 0){
-		return 0;
+		return STEPPER_INHIBIT_NONE;
 	}
 	
 	
 	printPgmString(PSTR("probe tripped \n"));
 	plan_set_current_position_n(pBlock->position[X_AXIS], pBlock->position[Y_AXIS], pBlock->position[Z_AXIS]);
-	return 1;
+	return STEPPER_INHIBIT_ALL;
 }
 
 uint8_t probe_seek(double x, double y, double z, double feed_rate){

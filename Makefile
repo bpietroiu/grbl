@@ -29,7 +29,7 @@
 
 DEVICE     = atmega328p
 CLOCK      = 16000000
-COM			= COM10
+COM			= COM19
 PROGRAMMER = -F -v -pm328p -cstk500v1 -P$(COM) -b57600 -D 
 OBJECTS    = main.o motion_control.o gcode.o spindle_control.o serial.o protocol.o stepper.o \
              eeprom.o settings.o planner.o nuts_bolts.o limits.o print.o status.o probe.o

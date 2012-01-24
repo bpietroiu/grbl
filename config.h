@@ -44,9 +44,10 @@
 
 #define LIMIT_DDR      		DDRB
 #define LIMIT_PIN     		PINB
-#define X_LIMIT_BIT          1
-#define Y_LIMIT_BIT          2
-#define Z_LIMIT_BIT          3
+#define LIMIT_PORT     		PORTB
+#define X_LIMIT_BIT          PB1
+#define Y_LIMIT_BIT          PB2
+#define Z_LIMIT_BIT          PB3
 
 #define PROBE_DDR			DDRC
 #define PROBE_PORT     		PORTC
@@ -57,11 +58,11 @@
 
 #define SPINDLE_ENABLE_DDR DDRB
 #define SPINDLE_ENABLE_PORT PORTB
-#define SPINDLE_ENABLE_BIT 4
+#define SPINDLE_ENABLE_BIT PB4
 
 #define SPINDLE_DIRECTION_DDR DDRB
 #define SPINDLE_DIRECTION_PORT PORTB
-#define SPINDLE_DIRECTION_BIT 5
+#define SPINDLE_DIRECTION_BIT PB5
 
 // This parameter sets the delay time before disabling the steppers after the final block of movement.
 // A short delay ensures the steppers come to a complete stop and the residual inertial force in the 

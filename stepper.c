@@ -167,56 +167,72 @@ SIGNAL(TIMER1_COMPA_vect)
 
   if (current_block != NULL) {
 	
+	uint8_t inhibit = STEPPER_INHIBIT_NONE;
 	if(pFuncStepCallback != NULL){
-		if(pFuncStepCallback(current_block)){
+		
+		inhibit = pFuncStepCallback(current_block);
+		if((inhibit & STEPPER_INHIBIT_ALL) == STEPPER_INHIBIT_ALL){
 			// we should stop all movements as out callback commanded
 			current_block = NULL;
 			plan_discard_current_block();
+			busy = false;
+			return;
 		}
 	}
   
   
     // Execute step displacement profile by bresenham line algorithm
     out_bits = current_block->direction_bits;
-    counter_x += current_block->steps_x;
-    if (counter_x > 0) {
-      out_bits |= (1<<X_STEP_BIT);
-      counter_x -= current_block->step_event_count;
 
-	  if(current_block->backlash_block == 0){
-		  if(out_bits & (1 << X_DIRECTION_BIT))
-			current_block->position[X_AXIS]-=1;
-		  else
-			current_block->position[X_AXIS]+=1;
-	  }
-	  
-    }
-    counter_y += current_block->steps_y;
-    if (counter_y > 0) {
-      out_bits |= (1<<Y_STEP_BIT);
-      counter_y -= current_block->step_event_count;
 
-	  if(current_block->backlash_block == 0){
-		  if(out_bits & (1 << Y_DIRECTION_BIT))
-			current_block->position[Y_AXIS]-=1;
-		  else
-			current_block->position[Y_AXIS]+=1;
+	if((inhibit & STEPPER_INHIBIT_X) == 0){
+		counter_x += current_block->steps_x;
+		if (counter_x > 0) {
+			out_bits |= (1<<X_STEP_BIT);
+			counter_x -= current_block->step_event_count;
+
+			if(current_block->backlash_block == 0){
+				if(out_bits & (1 << X_DIRECTION_BIT))
+					current_block->position[X_AXIS]-=1;
+				else
+					current_block->position[X_AXIS]+=1;
+			}
+			  
 		}
+	}
 
-	  }
-    counter_z += current_block->steps_z;
-    if (counter_z > 0) {
-      out_bits |= (1<<Z_STEP_BIT);
-      counter_z -= current_block->step_event_count;
 
-	  if(current_block->backlash_block == 0){
-		  if(out_bits & (1 << Z_DIRECTION_BIT))
-			current_block->position[Z_AXIS]-=1;
-		  else
-			current_block->position[Z_AXIS]+=1;
+	if((inhibit & STEPPER_INHIBIT_Y) == 0){
+	  counter_y += current_block->steps_y;
+		if (counter_y > 0) {
+			out_bits |= (1<<Y_STEP_BIT);
+			counter_y -= current_block->step_event_count;
+
+			if(current_block->backlash_block == 0){
+			  if(out_bits & (1 << Y_DIRECTION_BIT))
+				current_block->position[Y_AXIS]-=1;
+			  else
+				current_block->position[Y_AXIS]+=1;
+			}
+
 		}
-    }
-    
+	}
+
+
+    if((inhibit & STEPPER_INHIBIT_Z) == 0){
+		counter_z += current_block->steps_z;
+		if (counter_z > 0) {
+		  out_bits |= (1<<Z_STEP_BIT);
+		  counter_z -= current_block->step_event_count;
+
+		  if(current_block->backlash_block == 0){
+			  if(out_bits & (1 << Z_DIRECTION_BIT))
+				current_block->position[Z_AXIS]-=1;
+			  else
+				current_block->position[Z_AXIS]+=1;
+			}
+		}
+	}    
     step_events_completed++; // Iterate step events
 
     // While in block steps, check for de/ac-celeration events and execute them accordingly.

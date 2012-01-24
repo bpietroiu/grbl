@@ -27,4 +27,8 @@ void limits_init();
 // perform the homing cycle
 void limits_go_home();
 
+
+// get limit switches; 1=closed, 0=open
+void limits_get_limits(uint8_t* x, uint8_t* y, uint8_t* z);
+
 #endif

@@ -10,10 +10,12 @@
 #include "protocol.h"
 #include "config.h"
 #include "probe.h"
+#include "limits.h"
 
 
 // Parameter lines are on the form '$4=374.3' or '$' to dump current settings
 uint8_t status_execute_line(char *line) {
+	uint8_t lx, ly, lz;
 
   if(line[0] != '?') { 
     return(STATUS_UNSUPPORTED_STATEMENT); 
@@ -32,7 +34,17 @@ uint8_t status_execute_line(char *line) {
 	printFloat2(z, 5);
     printPgmString(PSTR(" probe="));
 	printInteger(probe_get_status());
-    printPgmString(PSTR("\n"));
+
+	limits_get_limits(&lx, &ly, &lz);
+
+    printPgmString(PSTR(" limits=("));
+	printInteger(lx);
+    printPgmString(PSTR(" "));
+	printInteger(ly);
+    printPgmString(PSTR(" "));
+	printInteger(lz);
+	
+    printPgmString(PSTR(")\n"));
   }
   else{ // binary report
 	int i;
